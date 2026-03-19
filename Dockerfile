@@ -16,6 +16,9 @@ RUN apk add --no-cache \
 
 WORKDIR /usr/src/flowise
 
+# Set CI=true to avoid non-TTY confirmation prompts during pnpm prune
+ENV CI=true
+
 # Copy app source (respects .dockerignore)
 COPY . .
 
