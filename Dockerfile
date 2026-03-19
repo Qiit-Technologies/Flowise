@@ -23,9 +23,9 @@ ENV CI=true
 COPY . .
 
 # Install dependencies and build
-RUN pnpm install && \
+RUN pnpm install --ignore-scripts && \
     pnpm build && \
-    pnpm prune --prod
+    pnpm prune --prod --ignore-scripts
 
 # Stage 2: Runtime
 FROM node:20-alpine AS runner
