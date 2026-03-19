@@ -42,18 +42,16 @@ RUN apk add --no-cache \
 WORKDIR /usr/src/flowise
 
 # Copy build artifacts and production dependencies from builder
-COPY --from=builder /usr/src/flowise/node_modules ./node_modules
-COPY --from=builder /usr/src/flowise/packages ./packages
-COPY --from=builder /usr/src/flowise/package.json ./package.json
+COPY --from=builder --chown=node:node /usr/src/flowise/node_modules ./node_modules
+COPY --from=builder --chown=node:node /usr/src/flowise/packages ./packages
+COPY --from=builder --chown=node:node /usr/src/flowise/package.json ./package.json
+COPY --from=builder --chown=node:node /usr/src/flowise/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Memory set for typical Render plans (e.g. Starter/Pro). Adjust if needed.
 ENV NODE_OPTIONS=--max-old-space-size=2048
-
-# Faster ownership change on a pruned set of files
-RUN chown -R node:node .
 
 USER node
 
