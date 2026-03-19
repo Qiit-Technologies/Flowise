@@ -1,43 +1,57 @@
-# Build local monorepo image
-# docker build --no-cache -t  flowise .
+# Stage 1: Build
+FROM node:20-alpine AS builder
 
-# Run image
-# docker run -d -p 3000:3000 flowise
-
-FROM node:20-alpine
-
-# Install system dependencies and build tools
-RUN apk update && \
-    apk add --no-cache \
-        libc6-compat \
-        python3 \
-        make \
-        g++ \
-        build-base \
-        cairo-dev \
-        pango-dev \
-        chromium \
-        curl && \
+# Install system dependencies and build tools for native compilation
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    make \
+    g++ \
+    build-base \
+    cairo-dev \
+    pango-dev \
+    chromium \
+    curl && \
     npm install -g pnpm
-
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
-ENV NODE_OPTIONS=--max-old-space-size=8192
 
 WORKDIR /usr/src/flowise
 
-# Copy app source
+# Copy app source (respects .dockerignore)
 COPY . .
 
 # Install dependencies and build
 RUN pnpm install && \
-    pnpm build
+    pnpm build && \
+    pnpm prune --prod
 
-# Give the node user ownership of the application files
+# Stage 2: Runtime
+FROM node:20-alpine AS runner
+
+# Install runtime dependencies ONLY
+RUN apk add --no-cache \
+    libc6-compat \
+    cairo \
+    pango \
+    chromium \
+    curl && \
+    npm install -g pnpm
+
+WORKDIR /usr/src/flowise
+
+# Copy build artifacts and production dependencies from builder
+COPY --from=builder /usr/src/flowise/node_modules ./node_modules
+COPY --from=builder /usr/src/flowise/packages ./packages
+COPY --from=builder /usr/src/flowise/package.json ./package.json
+
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Memory set for typical Render plans (e.g. Starter/Pro). Adjust if needed.
+ENV NODE_OPTIONS=--max-old-space-size=2048
+
+# Faster ownership change on a pruned set of files
 RUN chown -R node:node .
 
-# Switch to non-root user (node user already exists in node:20-alpine)
 USER node
 
 EXPOSE 3000
