@@ -57,4 +57,5 @@ USER node
 
 EXPOSE 3000
 
-CMD [ "pnpm", "start" ]
+# Start the server directly, bypassing devDependencies like run-script-os
+CMD [ "node", "packages/server/bin/run", "start" ]
